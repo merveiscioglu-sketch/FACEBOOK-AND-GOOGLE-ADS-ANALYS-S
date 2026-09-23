@@ -1,0 +1,39 @@
+WITH ilk_etkinlikler AS (
+  SELECT
+    user_pseudo_id,
+    MIN(TIMESTAMP_MICROS(event_timestamp)) AS ilk_etkinlik_zamani,
+    ARRAY_AGG(traffic_source.source ORDER BY event_timestamp ASC LIMIT 1)[OFFSET(0)] AS ilk_kaynak,
+    ARRAY_AGG(traffic_source.medium ORDER BY event_timestamp ASC LIMIT 1)[OFFSET(0)] AS ilk_arac
+  FROM
+    `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+  WHERE
+    _TABLE_SUFFIX BETWEEN '20210101' AND '20211231'
+  GROUP BY
+    user_pseudo_id
+),
+ilk_satin_alimalar AS (
+  SELECT
+    user_pseudo_id,
+    MIN(TIMESTAMP_MICROS(event_timestamp)) AS ilk_satin_alma_zamani
+  FROM
+    `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+  WHERE
+    _TABLE_SUFFIX BETWEEN '20210101' AND '20211231'
+    AND event_name = 'purchase'
+  GROUP BY
+    user_pseudo_id
+)
+SELECT
+  e.user_pseudo_id,
+  e.ilk_kaynak,
+  e.ilk_arac,
+  e.ilk_etkinlik_zamani,
+  s.ilk_satin_alma_zamani,
+  ROUND(TIMESTAMP_DIFF(s.ilk_satin_alma_zamani, e.ilk_etkinlik_zamani, MINUTE) / 60.0, 2) AS satin_almaya_kadar_gecan_saat
+FROM
+  ilk_etkinlikler e
+JOIN
+  ilk_satin_alimalar s ON e.user_pseudo_id = s.user_pseudo_id
+ORDER BY
+  satin_almaya_kadar_gecan_saat DESC
+LIMIT 20;

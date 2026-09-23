@@ -1,0 +1,21 @@
+WITH oturum_verileri AS (
+SELECT
+user_pseudo_id,
+(SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS oturum_id,
+MAX(CAST(COALESCE((SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'session_engaged'), '0') AS INT64)) AS etkilesim_varligi,
+SUM(COALESCE((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'engagement_time_msec'), 0)) AS etkilesim_suresi_msec,
+MAX(IF(event_name = 'purchase', 1, 0)) AS satin_alma_varmi
+FROM
+  `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+WHERE
+ _TABLE_SUFFIX BETWEEN '20210101' AND '20211231'
+GROUP BY
+ 1, 2
+HAVING
+oturum_id IS NOT NULL
+)
+SELECT
+ROUND(CORR(etkilesim_varligi, satin_alma_varmi), 4) AS etkilesim_varligi_satin_alma_korelasyonu,
+ROUND(CORR(etkilesim_suresi_msec, satin_alma_varmi), 4) AS etkilesim_suresi_satin_alma_korelasyonu
+FROM
+  oturum_verileri;

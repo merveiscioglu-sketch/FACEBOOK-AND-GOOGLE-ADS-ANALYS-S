@@ -1,0 +1,32 @@
+with kaynak_etkinlikleri as (
+select
+traffic_source.source as kaynak,
+traffic_source.medium as arac,
+user_pseudo_id,
+countif(event_name='session_start') as oturum_sayisi,
+countif(event_name='purchase') as satin_alma_sayisi
+from
+`bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+where
+_table_suffix between '20210101' and '20211231'
+group by
+kaynak,
+arac,
+user_pseudo_id
+)
+select
+kaynak,
+arac,
+countif(oturum_sayisi> 0) as oturum_baslatan_kullanici,
+countif(satin_alma_sayisi> 0) as satin_alan_kullanici,
+round(
+  safe_divide(countif(satin_alma_sayisi> 0),countif(oturum_sayisi> 0))*100,2
+) as donusum_orani_yuzde
+from
+kaynak_etkinlikleri
+group by
+kaynak,
+arac
+order  by
+oturum_baslatan_kullanici desc
+limit 10;

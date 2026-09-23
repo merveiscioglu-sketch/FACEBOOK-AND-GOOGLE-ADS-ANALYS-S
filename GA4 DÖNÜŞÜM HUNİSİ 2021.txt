@@ -1,0 +1,23 @@
+with kullanici_etkinlikleri as (
+select
+user_pseudo_id,
+countif(event_name='session_start') as oturum_sayisi,
+countif(event_name='view_item') as urun_inceleme_sayisi,
+countif(event_name='add_to_cart') as sepete_ekleme_sayisi,
+countif(event_name='begin_checkout') as odeme_baslatma_sayisi,
+countif(event_name='purchase') as satin_alma_sayisi
+from
+`bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+where
+_table_suffix between '20210101' and '20211231'
+group by
+user_pseudo_id
+)
+select
+countif(oturum_sayisi> 0) as oturum_baslatan_kullanici,
+countif(urun_inceleme_sayisi> 0) as urun_inceleyen_kullanici,
+countif(sepete_ekleme_sayisi> 0) as sepete_ekleyen_kullanici,
+countif(odeme_baslatma_sayisi> 0) as odemeye_gecen_kullanici,
+countif(satin_alma_sayisi> 0) as satin_alan_kullanici
+from
+kullanici_etkinlikleri;
